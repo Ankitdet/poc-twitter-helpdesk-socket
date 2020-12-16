@@ -2,7 +2,7 @@
   "name": "poc-twitter-helpdesk-socket",
   "version": "1.0.0",
   "description": "POC for twitter-helpdesk-socket",
-  "license": "MIT",",
+  "license": "MIT",
   "main": "server.js",
   "scripts": {
     "start": "forever server.js",
