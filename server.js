@@ -9,6 +9,7 @@ const wsServer = new webSocketServer({
   cors: true,
 });
 
+console.log('server is listininn on Port :', webSocketsServerPort);
 // Generates unique ID for every new connection
 const getUniqueID = () => {
   const s4 = () =>
