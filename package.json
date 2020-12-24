@@ -1,9 +1,9 @@
 {
-  "name": "twitter-helpdesk-server",
+  "name": "poc-twitter-helpdesk-socket",
   "version": "1.0.0",
-  "description": "Server for twitter-helpdesk",
-  "main": "server.js",
+  "description": "POC for twitter-helpdesk-socket",
   "license": "MIT",
+  "main": "server.js",
   "scripts": {
     "start": "forever server.js",
     "nodemon": "nodemon server.js"
