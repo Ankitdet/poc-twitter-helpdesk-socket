@@ -1,27 +1,53 @@
-const Twit = require("twit");
 const webSocketsServerPort = process.env.PORT || 8000;
-const webSocketServer = require("websocket").server;
-const http = require("http");
+const webSocketServer = require('websocket').server;
+const http = require('http');
+const Twit = require("twit");
+
+// Spinning the http server and the websocket server.
 const server = http.createServer();
 server.listen(webSocketsServerPort);
 const wsServer = new webSocketServer({
   httpServer: server,
-  cors: true,
+  cors: true
 });
 
-console.log('server is listininn on Port :', webSocketsServerPort);
 // Generates unique ID for every new connection
 const getUniqueID = () => {
-  const s4 = () =>
-    Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
-  return s4() + s4() + "-" + s4();
+  const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+  return s4() + s4() + '-' + s4();
 };
 
+// I'm maintaining all active connections in this object
 const clients = {};
+// I'm maintaining all active users in this object
+const users = {};
+// The current editor content is maintained here.
+let editorContent = null;
+// User activity history.
+let userActivity = [];
 
-wsServer.on("request", function (request) {
+const typesDef = {
+  USER_EVENT: "userevent",
+  CONTENT_CHANGE: "contentchange"
+}
+
+const sendMessage = (json) => {
+  // We are sending the current data to all connected clients
+  Object.keys(clients).map((client) => {
+    clients[client].sendUTF(json);
+  });
+}
+
+
+wsServer.on('request', function (request) {
+  var userID = getUniqueID();
+  const connection = request.accept(null, request.origin);
+  clients[userID] = connection;
+  console.log('connected: ' + userID + ' in ' + Object.getOwnPropertyNames(clients));
+  connection.on('message', function (message) {
+
+  }); 
+
   const path = request && request.resourceURL && request.resourceURL.path;
   const tempArr = path && path.substr(1, path.length).split("&");
   const dataArray =
@@ -30,12 +56,10 @@ wsServer.on("request", function (request) {
   const oauth_token_secret = dataArray[1];
   const screen_name = dataArray[2];
 
-  const userID = getUniqueID();
   console.log(
     new Date() + ` Recieved a new connection from origin ${request.origin}.`
   );
 
-  const connection = request.accept(null, request.origin);
   clients[userID] = {
     connection,
     oauth_token,
@@ -54,7 +78,7 @@ wsServer.on("request", function (request) {
     ) {
       continue;
     }
-	
+
     const T = new Twit({
       consumer_key: process.env.TWITTER_CONSUMER_KEY,
       consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
@@ -70,7 +94,7 @@ wsServer.on("request", function (request) {
 
     stream &&
       stream.on("tweet", function (tweet) {
-        //   console.log("tweet", tweet);
+        console.log('New tweet');
         clients[client] &&
           clients[client].connection.sendUTF(
             JSON.stringify({ type: "NEW_TWEET", data: tweet })
@@ -78,14 +102,14 @@ wsServer.on("request", function (request) {
       });
   }
 
-  connection.on("close", function (connection) {
-    console.log(`${new Date()} Peer ${userID} disconnected`);
-    delete clients[userID];
-  });
-});
 
-process.on("unhandledRejection", (err) => {
-  console.log(err.name, err.message);
-  console.log("UNHANDLED REJECTION! Shutting down...");
-  process.exit(1);
+  // user disconnected
+  connection.on('close', function (connection) {
+    console.log((new Date()) + " Peer " + userID + " disconnected.");
+    const json = { type: typesDef.USER_EVENT };
+    json.data = { users, userActivity };
+    delete clients[userID];
+    delete users[userID];
+    sendMessage(JSON.stringify(json));
+  });
 });
